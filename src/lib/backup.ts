@@ -31,11 +31,11 @@ export function parseBackup(text: string): PersistedData | null {
 
 // Uses the native share sheet when it can share files (iOS), otherwise downloads the file
 export async function exportBackup(data: PersistedData): Promise<void> {
-  const fileName = `ahorro-copia-${new Date().toISOString().slice(0, 10)}.json`
+  const fileName = `stash-backup-${new Date().toISOString().slice(0, 10)}.json`
   const file = new File([serializeBackup(data)], fileName, { type: 'application/json' })
 
   if (navigator.canShare?.({ files: [file] })) {
-    await navigator.share({ files: [file], title: 'Copia de seguridad de Ahorro' })
+    await navigator.share({ files: [file], title: 'Copia de seguridad de Stash' })
     return
   }
 

@@ -13,8 +13,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'favicon.svg', 'apple-touch-icon-180x180.png'],
       manifest: {
-        name: 'Ahorro',
-        short_name: 'Ahorro',
+        name: 'Stash',
+        short_name: 'Stash',
         description: 'Reparte tu sueldo en sobres y controla tus gastos del mes',
         lang: 'es',
         start_url: '/',

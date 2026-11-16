@@ -1,4 +1,4 @@
-# Ahorro
+# Stash
 
 Personal monthly budget app. Split your salary into envelopes (savings goal, fixed contributions, categories), log quick expenses and see what is left. Mobile first, installable as a PWA, no backend: everything is stored on the device.
 
