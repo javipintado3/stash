@@ -1,0 +1,23 @@
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body,
+#root {
+  min-height: 100dvh;
+  margin: 0;
+  overscroll-behavior: none;
+}
+
+/* Safari zooms into inputs smaller than 16px */
+input,
+select,
+textarea {
+  font-size: 16px !important;
+}
