@@ -6,7 +6,7 @@ import DialogContent from '@mui/material/DialogContent'
 import DialogTitle from '@mui/material/DialogTitle'
 import Stack from '@mui/material/Stack'
 import TextField from '@mui/material/TextField'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { iconFor } from '../lib/icons.tsx'
 import { todayIso } from '../lib/months.ts'
 import { useAppStore } from '../store/useAppStore.ts'
@@ -24,6 +24,7 @@ export default function ExpenseDialog({ expense, onClose }: ExpenseDialogProps) 
   const addExpense = useAppStore((state) => state.addExpense)
   const updateExpense = useAppStore((state) => state.updateExpense)
 
+  const amountRef = useRef<HTMLInputElement>(null)
   const [categoryId, setCategoryId] = useState(expense?.categoryId ?? categories[0]?.id ?? '')
   const [amount, setAmount] = useState(expense?.amount ?? 0)
   const [note, setNote] = useState(expense?.note ?? '')
@@ -44,11 +45,17 @@ export default function ExpenseDialog({ expense, onClose }: ExpenseDialogProps) 
   }
 
   return (
-    <Dialog open onClose={onClose} fullWidth maxWidth="xs">
+    <Dialog
+      open
+      onClose={onClose}
+      fullWidth
+      maxWidth="xs"
+      slotProps={{ transition: { onEntered: () => amountRef.current?.focus() } }}
+    >
       <DialogTitle>{expense ? 'Editar gasto' : 'Nuevo gasto'}</DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ pt: 1 }}>
-          <AmountInput label="Importe" cents={amount} onChange={setAmount} autoFocus />
+          <AmountInput label="Importe" cents={amount} onChange={setAmount} inputRef={amountRef} />
           <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 1 }}>
             {categories.map((category) => {
               const Icon = iconFor(category.icon)

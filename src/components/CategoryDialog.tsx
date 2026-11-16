@@ -7,7 +7,7 @@ import DialogTitle from '@mui/material/DialogTitle'
 import IconButton from '@mui/material/IconButton'
 import Stack from '@mui/material/Stack'
 import TextField from '@mui/material/TextField'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { CATEGORY_COLORS, CATEGORY_ICONS } from '../lib/icons.tsx'
 import { useAppStore } from '../store/useAppStore.ts'
 import type { Category } from '../types.ts'
@@ -20,16 +20,23 @@ type CategoryDialogProps = {
 // Render this component only while open, so its form state starts fresh each time
 export default function CategoryDialog({ category, onClose }: CategoryDialogProps) {
   const saveCategory = useAppStore((state) => state.saveCategory)
+  const nameRef = useRef<HTMLInputElement>(null)
   const [name, setName] = useState(category?.name ?? '')
   const [icon, setIcon] = useState(category?.icon ?? 'other')
   const [color, setColor] = useState(category?.color ?? CATEGORY_COLORS[0])
 
   return (
-    <Dialog open onClose={onClose} fullWidth maxWidth="xs">
+    <Dialog
+      open
+      onClose={onClose}
+      fullWidth
+      maxWidth="xs"
+      slotProps={{ transition: { onEntered: () => nameRef.current?.focus() } }}
+    >
       <DialogTitle>{category ? 'Editar categoría' : 'Nueva categoría'}</DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ pt: 1 }}>
-          <TextField label="Nombre" value={name} onChange={(event) => setName(event.target.value)} fullWidth autoFocus />
+          <TextField label="Nombre" value={name} onChange={(event) => setName(event.target.value)} fullWidth inputRef={nameRef} />
           <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 1 }}>
             {Object.entries(CATEGORY_ICONS).map(([key, Icon]) => (
               <IconButton
