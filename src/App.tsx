@@ -1,13 +1,19 @@
+import AddIcon from '@mui/icons-material/Add'
 import Box from '@mui/material/Box'
 import Container from '@mui/material/Container'
+import Fab from '@mui/material/Fab'
+import { useState } from 'react'
 import { Route, Routes } from 'react-router-dom'
 import BottomNav from './components/BottomNav.tsx'
+import ExpenseDialog from './components/ExpenseDialog.tsx'
 import Expenses from './pages/Expenses.tsx'
 import Plan from './pages/Plan.tsx'
 import Settings from './pages/Settings.tsx'
 import Summary from './pages/Summary.tsx'
 
 export default function App() {
+  const [adding, setAdding] = useState(false)
+
   return (
     <Box sx={{ minHeight: '100dvh', pt: 'var(--safe-top)' }}>
       <Container maxWidth="sm" sx={{ py: 2, pb: 'calc(96px + var(--safe-bottom))' }}>
@@ -18,7 +24,16 @@ export default function App() {
           <Route path="/settings" element={<Settings />} />
         </Routes>
       </Container>
+      <Fab
+        color="primary"
+        aria-label="Añadir gasto"
+        onClick={() => setAdding(true)}
+        sx={{ position: 'fixed', right: 16, bottom: 'calc(72px + var(--safe-bottom))', zIndex: 11 }}
+      >
+        <AddIcon />
+      </Fab>
       <BottomNav />
+      {adding ? <ExpenseDialog onClose={() => setAdding(false)} /> : null}
     </Box>
   )
 }
