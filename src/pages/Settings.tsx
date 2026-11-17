@@ -11,12 +11,15 @@ import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
 import { useState } from 'react'
 import CategoryDialog from '../components/CategoryDialog.tsx'
+import { signOutUser, useAuth } from '../lib/auth.ts'
 import { exportBackup, isBackupStale, parseBackup } from '../lib/backup.ts'
 import { iconFor } from '../lib/icons.tsx'
+import { readLegacyData, removeLegacyData } from '../lib/legacy.ts'
 import { useAppStore } from '../store/useAppStore.ts'
 import type { Category } from '../types.ts'
 
 export default function Settings() {
+  const auth = useAuth()
   const categories = useAppStore((state) => state.categories)
   const plans = useAppStore((state) => state.plans)
   const expenses = useAppStore((state) => state.expenses)
@@ -28,6 +31,9 @@ export default function Settings() {
   // `null` = closed, `'new'` = creating, otherwise editing that category
   const [editing, setEditing] = useState<Category | 'new' | null>(null)
   const [message, setMessage] = useState<{ severity: 'success' | 'error'; text: string } | null>(null)
+
+  // Data left on this device by the version that had no cloud (read once when the screen opens)
+  const [legacyData, setLegacyData] = useState(readLegacyData)
 
   const hasData = expenses.length > 0 || Object.keys(plans).length > 0
 
@@ -51,6 +57,15 @@ export default function Settings() {
     }
   }
 
+  const handleUploadLegacy = () => {
+    if (legacyData) {
+      importData(legacyData)
+      removeLegacyData()
+      setLegacyData(null)
+      setMessage({ severity: 'success', text: 'Datos del dispositivo subidos a tu cuenta.' })
+    }
+  }
+
   return (
     <Stack spacing={2}>
       <Typography variant="h5" sx={{ fontWeight: 800 }}>
@@ -63,13 +78,42 @@ export default function Settings() {
         <CardContent>
           <Stack spacing={2}>
             <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>
+              Cuenta
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Has entrado como {auth.user?.email}. Tus datos se guardan en tu cuenta y los ves igual desde cualquier
+              dispositivo.
+            </Typography>
+            {legacyData ? (
+              <Alert
+                severity="info"
+                action={
+                  <Button color="inherit" size="small" onClick={handleUploadLegacy}>
+                    Subir
+                  </Button>
+                }
+              >
+                Hay datos guardados en este dispositivo de antes de crear la cuenta. Súbelos para no perderlos.
+              </Alert>
+            ) : null}
+            <Button variant="outlined" onClick={() => signOutUser()}>
+              Cerrar sesión
+            </Button>
+          </Stack>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent>
+          <Stack spacing={2}>
+            <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>
               Copia de seguridad
             </Typography>
             {isBackupStale(lastExportAt, hasData) ? (
               <Alert severity="warning">Hace más de 30 días de tu última copia. Conviene exportar una.</Alert>
             ) : null}
             <Typography variant="body2" color="text.secondary">
-              Tus datos viven solo en este dispositivo. Exporta una copia de vez en cuando por si cambias de móvil.
+              Tus datos ya están en la nube. Aun así, exporta una copia de vez en cuando como respaldo extra.
             </Typography>
             <Button variant="contained" onClick={handleExport}>
               Exportar datos
@@ -130,8 +174,8 @@ export default function Settings() {
             <Typography variant="body2">2. Pulsa Compartir y elige «Añadir a pantalla de inicio».</Typography>
             <Typography variant="body2">3. Usa siempre la app instalada desde tu pantalla de inicio.</Typography>
             <Typography variant="body2" color="text.secondary">
-              Ojo: la app instalada y la web abierta en Safari no comparten datos. Si ya apuntaste cosas en Safari,
-              expórtalas y súbelas con «Importar datos» desde la app instalada.
+              Ojo: la app instalada y Safari no comparten la sesión. Inicia sesión una vez dentro de la app instalada y
+              verás los mismos datos.
             </Typography>
           </Stack>
         </CardContent>
