@@ -4,15 +4,20 @@ import { copyPlanToMonth, emptyPlan } from '../lib/budget.ts'
 import {
   deleteCategoryDoc,
   deleteExpenseDoc,
+  deleteRecurringDoc,
+  logRecurringExpenses,
   replaceAllData,
   saveCategoryDoc,
   saveExpenseDoc,
   savePlanDoc,
+  saveRecurringDoc,
   seedDefaultCategories,
+  setAnnualSavingsGoalDoc,
   watchUserData,
 } from '../lib/cloud.ts'
 import { currentMonth, shiftMonth } from '../lib/months.ts'
-import type { Category, Expense, MonthPlan } from '../types.ts'
+import { dueRecurring } from '../lib/recurring.ts'
+import type { Category, Expense, MonthPlan, RecurringExpense } from '../types.ts'
 
 export const STORE_VERSION = 1
 
@@ -24,7 +29,18 @@ export type PersistedData = {
   lastExportAt: string | null
 }
 
+export type ThemeMode = 'system' | 'light' | 'dark'
+
 type AppState = PersistedData & {
+  recurring: RecurringExpense[]
+  annualSavingsGoal: number
+  themeMode: ThemeMode
+  // The category of the last expense, so the next one starts with it selected
+  lastCategoryId: string | null
+  setThemeMode: (mode: ThemeMode) => void
+  setAnnualSavingsGoal: (cents: number) => void
+  saveRecurring: (item: RecurringExpense) => void
+  removeRecurring: (id: string) => void
   // True once the first copy of the cloud data has arrived, so the screens never flash empty
   loaded: boolean
   selectedMonth: string
@@ -56,7 +72,7 @@ function write(task: (uid: string) => Promise<unknown>): void {
 }
 
 export const useAppStore = create<AppState>()(
-  // Only `lastExportAt` is kept on the device: everything else lives in Firestore
+  // Only a few preferences are kept on the device: everything else lives in Firestore
   persist(
     (set, get) => ({
       version: STORE_VERSION,
@@ -64,6 +80,10 @@ export const useAppStore = create<AppState>()(
       plans: {},
       expenses: [],
       lastExportAt: null,
+      recurring: [],
+      annualSavingsGoal: 0,
+      themeMode: 'system',
+      lastCategoryId: null,
       loaded: false,
       selectedMonth: currentMonth(),
       setSelectedMonth: (month) => set({ selectedMonth: month }),
@@ -79,7 +99,10 @@ export const useAppStore = create<AppState>()(
         )
         if (source) write((uid) => savePlanDoc(uid, copyPlanToMonth(source, month)))
       },
-      addExpense: (expense) => write((uid) => saveExpenseDoc(uid, expense)),
+      addExpense: (expense) => {
+        set({ lastCategoryId: expense.categoryId })
+        write((uid) => saveExpenseDoc(uid, expense))
+      },
       updateExpense: (expense) => write((uid) => saveExpenseDoc(uid, expense)),
       removeExpense: (id) => write((uid) => deleteExpenseDoc(uid, id)),
       saveCategory: (category) => write((uid) => saveCategoryDoc(uid, category)),
@@ -89,6 +112,15 @@ export const useAppStore = create<AppState>()(
           .map((plan) => ({ ...plan, budgets: plan.budgets.filter((budget) => budget.categoryId !== id) }))
         write((uid) => deleteCategoryDoc(uid, id, plansToUpdate))
       },
+      setThemeMode: (mode) => set({ themeMode: mode }),
+      setAnnualSavingsGoal: (cents) => write((uid) => setAnnualSavingsGoalDoc(uid, cents)),
+      // If its day has already passed this month, the expense is logged right away
+      saveRecurring: (item) => {
+        const today = new Date()
+        const due = dueRecurring([item], currentMonth(), today.getDate())
+        write((uid) => (due.length > 0 ? logRecurringExpenses(uid, due, currentMonth()) : saveRecurringDoc(uid, item)))
+      },
+      removeRecurring: (id) => write((uid) => deleteRecurringDoc(uid, id)),
       markExported: () => set({ lastExportAt: new Date().toISOString() }),
       importData: (data) => {
         const { categories, plans, expenses } = get()
@@ -104,10 +136,27 @@ export const useAppStore = create<AppState>()(
     {
       name: 'stash-device',
       version: STORE_VERSION,
-      partialize: (state) => ({ lastExportAt: state.lastExportAt }),
+      partialize: (state) => ({
+        lastExportAt: state.lastExportAt,
+        themeMode: state.themeMode,
+        lastCategoryId: state.lastCategoryId,
+      }),
     },
   ),
 )
+
+// A month without a plan starts as a copy of the closest earlier one, so only the changes need editing
+function prepareCurrentMonth(): void {
+  const { plans, copyPreviousMonth } = useAppStore.getState()
+  if (plans[currentMonth()] === undefined) copyPreviousMonth(currentMonth())
+}
+
+// Logs the recurring expenses whose day has arrived. Runs once per sign in, when the data is loaded
+function logDueRecurring(): void {
+  const month = currentMonth()
+  const due = dueRecurring(useAppStore.getState().recurring, month, new Date().getDate())
+  if (due.length > 0) write((uid) => logRecurringExpenses(uid, due, month))
+}
 
 // Called by the auth module when the user signs in (uid) or out (null)
 let stopWatching: (() => void) | null = null
@@ -116,14 +165,18 @@ export function connectStore(uid: string | null): void {
   stopWatching?.()
   stopWatching = null
   activeUid = uid
-  useAppStore.setState({ categories: [], plans: {}, expenses: [], loaded: false })
+  useAppStore.setState({ categories: [], plans: {}, expenses: [], recurring: [], annualSavingsGoal: 0, loaded: false })
   if (uid === null) return
 
-  // `loaded` flips once the three collections have delivered their first snapshot
-  const pending = new Set(['categories', 'plans', 'expenses'])
+  // `loaded` flips once every source has delivered its first snapshot
+  const pending = new Set(['categories', 'plans', 'expenses', 'recurring', 'settings'])
   const arrived = (name: string) => {
-    pending.delete(name)
-    if (pending.size === 0) useAppStore.setState({ loaded: true })
+    const wasPending = pending.delete(name)
+    if (wasPending && pending.size === 0) {
+      useAppStore.setState({ loaded: true })
+      prepareCurrentMonth()
+      logDueRecurring()
+    }
   }
 
   stopWatching = watchUserData(uid, {
@@ -138,6 +191,14 @@ export function connectStore(uid: string | null): void {
     onExpenses: (expenses) => {
       useAppStore.setState({ expenses })
       arrived('expenses')
+    },
+    onRecurring: (recurring) => {
+      useAppStore.setState({ recurring })
+      arrived('recurring')
+    },
+    onSettings: ({ annualSavingsGoal }) => {
+      useAppStore.setState({ annualSavingsGoal })
+      arrived('settings')
     },
   })
 

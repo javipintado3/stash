@@ -21,3 +21,14 @@ export type Expense = {
   note?: string
   date: string
 }
+
+// A fixed expense (rent, subscriptions...) that is logged automatically once a month.
+// `day` is 1-28 and `lastGenerated` is the last "YYYY-MM" month it was logged for.
+export type RecurringExpense = {
+  id: string
+  name: string
+  categoryId: string
+  amount: number
+  day: number
+  lastGenerated?: string
+}

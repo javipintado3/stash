@@ -21,11 +21,16 @@ type ExpenseDialogProps = {
 // Render this component only while open, so its form state starts fresh each time
 export default function ExpenseDialog({ expense, onClose }: ExpenseDialogProps) {
   const categories = useAppStore((state) => state.categories)
+  const lastCategoryId = useAppStore((state) => state.lastCategoryId)
   const addExpense = useAppStore((state) => state.addExpense)
   const updateExpense = useAppStore((state) => state.updateExpense)
 
   const amountRef = useRef<HTMLInputElement>(null)
-  const [categoryId, setCategoryId] = useState(expense?.categoryId ?? categories[0]?.id ?? '')
+  const [categoryId, setCategoryId] = useState(
+    expense?.categoryId ??
+      (categories.some((category) => category.id === lastCategoryId) ? lastCategoryId : categories[0]?.id) ??
+      '',
+  )
   const [amount, setAmount] = useState(expense?.amount ?? 0)
   const [note, setNote] = useState(expense?.note ?? '')
   const [date, setDate] = useState(expense?.date ?? todayIso())
@@ -44,6 +49,12 @@ export default function ExpenseDialog({ expense, onClose }: ExpenseDialogProps) 
     return expense ? updateExpense(saved) : addExpense(saved)
   }
 
+  // Enter saves, so a typical expense is: amount, tap a category, Enter
+  const saveAndClose = () => {
+    handleSave()
+    onClose()
+  }
+
   return (
     <Dialog
       open
@@ -54,7 +65,11 @@ export default function ExpenseDialog({ expense, onClose }: ExpenseDialogProps) 
     >
       <DialogTitle>{expense ? 'Editar gasto' : 'Nuevo gasto'}</DialogTitle>
       <DialogContent>
-        <Stack spacing={2} sx={{ pt: 1 }}>
+        <Stack
+          spacing={2}
+          sx={{ pt: 1 }}
+          onKeyDown={(event) => (event.key === 'Enter' && canSave ? saveAndClose() : undefined)}
+        >
           <AmountInput label="Importe" cents={amount} onChange={setAmount} inputRef={amountRef} />
           <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 1 }}>
             {categories.map((category) => {
@@ -67,7 +82,7 @@ export default function ExpenseDialog({ expense, onClose }: ExpenseDialogProps) 
                   onClick={() => setCategoryId(category.id)}
                   color={categoryId === category.id ? 'primary' : 'default'}
                   variant={categoryId === category.id ? 'filled' : 'outlined'}
-                  sx={{ height: 40 }}
+                  sx={{ height: 44, fontSize: 15 }}
                 />
               )
             })}
@@ -88,10 +103,7 @@ export default function ExpenseDialog({ expense, onClose }: ExpenseDialogProps) 
         <Button
           variant="contained"
           disabled={!canSave}
-          onClick={() => {
-            handleSave()
-            onClose()
-          }}
+          onClick={saveAndClose}
         >
           Guardar
         </Button>

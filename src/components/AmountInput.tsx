@@ -10,14 +10,16 @@ type AmountInputProps = {
   inputRef?: Ref<HTMLInputElement>
 }
 
-// Keeps the raw text locally so inputs like "12," can be typed, and reports cents upwards
+// Keeps the raw text locally so inputs like "12," can be typed, and reports cents upwards.
+// When the cents change from outside (e.g. a "fill the rest" button) the new amount is shown instead.
 export default function AmountInput({ label, cents, onChange, inputRef }: AmountInputProps) {
   const [text, setText] = useState(centsToInput(cents))
+  const shownText = parseEurosToCents(text) === cents ? text : centsToInput(cents)
 
   return (
     <TextField
       label={label}
-      value={text}
+      value={shownText}
       onChange={(event) => {
         setText(event.target.value)
         onChange(parseEurosToCents(event.target.value))

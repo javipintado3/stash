@@ -40,7 +40,7 @@ export default function Plan() {
         }}
       >
         <CardContent>
-          <Typography variant="body2">Sin asignar</Typography>
+          <Typography variant="body2">Te queda por repartir</Typography>
           <Typography variant="h4" sx={{ fontWeight: 800 }}>
             {formatEuros(free)}
           </Typography>
@@ -144,6 +144,15 @@ export default function Plan() {
             </Typography>
             {categories.map((category) => {
               const Icon = iconFor(category.icon)
+              const amount = plan.budgets.find((budget) => budget.categoryId === category.id)?.amount ?? 0
+              const setAmount = (cents: number) =>
+                updatePlan(month, (current) => ({
+                  ...current,
+                  budgets: [
+                    ...current.budgets.filter((budget) => budget.categoryId !== category.id),
+                    { categoryId: category.id, amount: cents },
+                  ],
+                }))
               return (
                 <Stack key={`${month}-${category.id}`} direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
                   <Avatar sx={{ bgcolor: category.color }}>
@@ -151,17 +160,14 @@ export default function Plan() {
                   </Avatar>
                   <AmountInput
                     label={category.name}
-                    cents={plan.budgets.find((budget) => budget.categoryId === category.id)?.amount ?? 0}
-                    onChange={(cents) =>
-                      updatePlan(month, (current) => ({
-                        ...current,
-                        budgets: [
-                          ...current.budgets.filter((budget) => budget.categoryId !== category.id),
-                          { categoryId: category.id, amount: cents },
-                        ],
-                      }))
-                    }
+                    cents={amount}
+                    onChange={setAmount}
                   />
+                  {free > 0 ? (
+                    <Button size="small" sx={{ whiteSpace: 'nowrap' }} onClick={() => setAmount(amount + free)}>
+                      Poner resto
+                    </Button>
+                  ) : null}
                 </Stack>
               )
             })}

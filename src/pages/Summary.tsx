@@ -1,3 +1,4 @@
+import Alert from '@mui/material/Alert'
 import Avatar from '@mui/material/Avatar'
 import Button from '@mui/material/Button'
 import Card from '@mui/material/Card'
@@ -9,12 +10,14 @@ import { Link } from 'react-router-dom'
 import MonthSwitcher from '../components/MonthSwitcher.tsx'
 import {
   budgetStatus,
+  categoryAlerts,
   emptyPlan,
   fixedTotal,
   realSavings,
   remaining,
   spentInCategory,
   unassigned,
+  yearSavings,
 } from '../lib/budget.ts'
 import { iconFor } from '../lib/icons.tsx'
 import { formatEuros } from '../lib/money.ts'
@@ -27,10 +30,15 @@ export default function Summary() {
   const storedPlan = useAppStore((state) => state.plans[month])
   const categories = useAppStore((state) => state.categories)
   const expenses = useAppStore((state) => state.expenses)
+  const plans = useAppStore((state) => state.plans)
+  const annualGoal = useAppStore((state) => state.annualSavingsGoal)
 
   const plan = storedPlan ?? emptyPlan(month)
   const free = unassigned(plan)
   const savings = realSavings(plan, expenses)
+  const alerts = categoryAlerts(plan, expenses, categories)
+  const year = month.slice(0, 4)
+  const savedThisYear = yearSavings(plans, expenses, year)
 
   return (
     <Stack spacing={2}>
@@ -61,7 +69,7 @@ export default function Summary() {
                   <Typography sx={{ fontWeight: 600 }}>{formatEuros(fixedTotal(plan))}</Typography>
                 </div>
                 <div>
-                  <Typography variant="caption">Sin asignar</Typography>
+                  <Typography variant="caption">Te queda por repartir</Typography>
                   <Typography sx={{ fontWeight: 600, color: free < 0 ? 'error.dark' : 'inherit' }}>
                     {formatEuros(free)}
                   </Typography>
@@ -69,6 +77,14 @@ export default function Summary() {
               </Stack>
             </CardContent>
           </Card>
+
+          {alerts.map((alert) => (
+            <Alert key={alert.category.id} severity={alert.status === 'over' ? 'error' : 'warning'}>
+              {alert.status === 'over'
+                ? `${alert.category.name}: te has pasado ${formatEuros(alert.spent - alert.budget)} del presupuesto.`
+                : `${alert.category.name}: llevas el ${alert.percent} % del presupuesto.`}
+            </Alert>
+          ))}
 
           <Card>
             <CardContent>
@@ -87,6 +103,25 @@ export default function Summary() {
               </Typography>
             </CardContent>
           </Card>
+
+          {annualGoal > 0 ? (
+            <Card>
+              <CardContent>
+                <Typography variant="body2" color="text.secondary">
+                  Meta de ahorro de {year}
+                </Typography>
+                <Typography variant="h5" sx={{ fontWeight: 800 }}>
+                  {formatEuros(Math.max(0, savedThisYear))} de {formatEuros(annualGoal)}
+                </Typography>
+                <LinearProgress
+                  variant="determinate"
+                  value={Math.min(100, Math.max(0, (savedThisYear / annualGoal) * 100))}
+                  color={savedThisYear >= annualGoal ? 'success' : 'primary'}
+                  sx={{ mt: 1.5, height: 8, borderRadius: 4 }}
+                />
+              </CardContent>
+            </Card>
+          ) : null}
 
           {categories.map((category) => {
             const budget = plan.budgets.find((item) => item.categoryId === category.id)?.amount ?? 0

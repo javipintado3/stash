@@ -9,6 +9,7 @@ import ExpenseDialog from './components/ExpenseDialog.tsx'
 import Expenses from './pages/Expenses.tsx'
 import Plan from './pages/Plan.tsx'
 import Settings from './pages/Settings.tsx'
+import Stats from './pages/Stats.tsx'
 import Summary from './pages/Summary.tsx'
 
 export default function AppShell() {
@@ -21,6 +22,7 @@ export default function AppShell() {
           <Route path="/" element={<Summary />} />
           <Route path="/plan" element={<Plan />} />
           <Route path="/expenses" element={<Expenses />} />
+          <Route path="/stats" element={<Stats />} />
           <Route path="/settings" element={<Settings />} />
         </Routes>
       </Container>
