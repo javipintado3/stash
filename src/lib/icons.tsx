@@ -27,7 +27,7 @@ export const CATEGORY_ICONS: Record<string, ElementType> = {
   other: CategoryIcon,
 }
 
-export const CATEGORY_COLORS = ['#00AEEF', '#8b5cf6', '#22c55e', '#f59e0b', '#ec4899', '#ef4444', '#14b8a6', '#64748b']
+export const CATEGORY_COLORS = ['#3f6b4f', '#b5651d', '#c9a227', '#7a5c8f', '#b84a4a', '#2f7f86', '#8a8a7a', '#c97a9a']
 
 export function iconFor(key: string): ElementType {
   return CATEGORY_ICONS[key] ?? CategoryIcon

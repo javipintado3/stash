@@ -14,8 +14,8 @@ export default function BottomNav() {
 
   return (
     <Paper
-      elevation={8}
-      sx={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 10, pb: 'var(--safe-bottom)' }}
+      elevation={0}
+      sx={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 10, pb: 'var(--safe-bottom)', borderTop: 1, borderColor: 'divider', borderRadius: 0 }}
     >
       <BottomNavigation
         value={pathname}

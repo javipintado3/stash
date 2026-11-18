@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
-const THEME_COLOR = '#01BAFD'
+const THEME_COLOR = '#f5efe3'
 
 // https://vite.dev/config/
 export default defineConfig({
