@@ -47,7 +47,7 @@ export default function Stats() {
             height={260}
             xAxis={[{ scaleType: 'band', data: months.map(shortMonthLabel) }]}
             series={[
-              { data: savings.map((item) => item.savings / 100), label: 'Ahorro real', color: '#00AEEF', valueFormatter: eurosLabel },
+              { data: savings.map((item) => item.savings / 100), label: 'Ahorro real', color: '#6c97d6', valueFormatter: eurosLabel },
               { data: savings.map((item) => item.goal / 100), label: 'Objetivo', color: '#9aa7b0', valueFormatter: eurosLabel },
             ]}
           />

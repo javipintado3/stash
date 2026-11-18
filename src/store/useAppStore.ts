@@ -57,7 +57,7 @@ type AppState = PersistedData & {
 }
 
 export const DEFAULT_CATEGORIES: Category[] = [
-  { id: 'home', name: 'Casa', icon: 'home', color: '#00AEEF' },
+  { id: 'home', name: 'Casa', icon: 'home', color: '#2f5fa8' },
   { id: 'going-out', name: 'Salir', icon: 'nightlife', color: '#8b5cf6' },
   { id: 'groceries', name: 'Super', icon: 'cart', color: '#22c55e' },
   { id: 'shopping', name: 'Compras', icon: 'bag', color: '#f59e0b' },
