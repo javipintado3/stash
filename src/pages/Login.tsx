@@ -11,6 +11,7 @@ import Tabs from '@mui/material/Tabs'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import { useState, type FormEvent } from 'react'
+import PasswordField from '../components/PasswordField.tsx'
 import { authErrorMessage, resetPassword, signIn, signUp } from '../lib/auth.ts'
 
 type Mode = 'login' | 'register' | 'reset'
@@ -85,23 +86,19 @@ export default function Login() {
                   onChange={(event) => setEmail(event.target.value)}
                 />
                 {mode === 'reset' ? null : (
-                  <TextField
+                  <PasswordField
                     label="Contraseña"
-                    type="password"
                     autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-                    required
                     value={password}
-                    onChange={(event) => setPassword(event.target.value)}
+                    onChange={setPassword}
                   />
                 )}
                 {mode === 'register' ? (
-                  <TextField
+                  <PasswordField
                     label="Repite la contraseña"
-                    type="password"
                     autoComplete="new-password"
-                    required
                     value={confirmation}
-                    onChange={(event) => setConfirmation(event.target.value)}
+                    onChange={setConfirmation}
                   />
                 ) : null}
 
