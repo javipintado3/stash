@@ -15,7 +15,7 @@ export function buildTheme(mode: 'light' | 'dark') {
     },
     shape: { borderRadius: 16 },
     typography: {
-      fontFamily: '"Inter", system-ui, -apple-system, "Segoe UI", sans-serif',
+      fontFamily: '"Manrope", system-ui, -apple-system, "Segoe UI", sans-serif',
       button: { textTransform: 'none', fontWeight: 600 },
     },
     components: {

@@ -7,6 +7,7 @@ import IconButton from '@mui/material/IconButton'
 import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
 import { useState } from 'react'
+import ConfirmDialog from '../components/ConfirmDialog.tsx'
 import ExpenseDialog from '../components/ExpenseDialog.tsx'
 import MonthSwitcher from '../components/MonthSwitcher.tsx'
 import { iconFor } from '../lib/icons.tsx'
@@ -20,6 +21,7 @@ export default function Expenses() {
   const categories = useAppStore((state) => state.categories)
   const removeExpense = useAppStore((state) => state.removeExpense)
   const [editing, setEditing] = useState<Expense | null>(null)
+  const [deleting, setDeleting] = useState<Expense | null>(null)
 
   const monthExpenses = expenses
     .filter((expense) => expense.month === month)
@@ -54,7 +56,7 @@ export default function Expenses() {
                   <IconButton aria-label="Editar gasto" onClick={() => setEditing(expense)}>
                     <EditOutlinedIcon />
                   </IconButton>
-                  <IconButton aria-label="Borrar gasto" onClick={() => removeExpense(expense.id)}>
+                  <IconButton aria-label="Borrar gasto" onClick={() => setDeleting(expense)}>
                     <DeleteOutlinedIcon />
                   </IconButton>
                 </Stack>
@@ -65,6 +67,15 @@ export default function Expenses() {
       )}
 
       {editing ? <ExpenseDialog expense={editing} onClose={() => setEditing(null)} /> : null}
+      {deleting ? (
+        <ConfirmDialog
+          title="Borrar gasto"
+          text={`¿Seguro que quieres borrar este gasto de ${formatEuros(deleting.amount)}? No se puede deshacer.`}
+          confirmLabel="Borrar"
+          onConfirm={() => removeExpense(deleting.id)}
+          onClose={() => setDeleting(null)}
+        />
+      ) : null}
     </Stack>
   )
 }

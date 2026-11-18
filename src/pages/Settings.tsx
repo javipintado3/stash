@@ -1,6 +1,16 @@
+import AccountCircleOutlinedIcon from '@mui/icons-material/AccountCircleOutlined'
 import AddIcon from '@mui/icons-material/Add'
+import BackupOutlinedIcon from '@mui/icons-material/BackupOutlined'
+import CategoryOutlinedIcon from '@mui/icons-material/CategoryOutlined'
 import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined'
+import DeleteForeverOutlinedIcon from '@mui/icons-material/DeleteForeverOutlined'
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined'
+import HelpOutlineOutlinedIcon from '@mui/icons-material/HelpOutlineOutlined'
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
+import PaletteOutlinedIcon from '@mui/icons-material/PaletteOutlined'
+import PhoneIphoneOutlinedIcon from '@mui/icons-material/PhoneIphoneOutlined'
+import RepeatOutlinedIcon from '@mui/icons-material/RepeatOutlined'
+import SavingsOutlinedIcon from '@mui/icons-material/SavingsOutlined'
 import Alert from '@mui/material/Alert'
 import Avatar from '@mui/material/Avatar'
 import Button from '@mui/material/Button'
@@ -14,6 +24,11 @@ import Typography from '@mui/material/Typography'
 import { useState } from 'react'
 import AmountInput from '../components/AmountInput.tsx'
 import CategoryDialog from '../components/CategoryDialog.tsx'
+import ChangePasswordDialog from '../components/ChangePasswordDialog.tsx'
+import ConfirmDialog from '../components/ConfirmDialog.tsx'
+import DeleteAccountDialog from '../components/DeleteAccountDialog.tsx'
+import HelpDialog from '../components/HelpDialog.tsx'
+import SettingsTitle from '../components/SettingsTitle.tsx'
 import RecurringDialog from '../components/RecurringDialog.tsx'
 import { signOutUser, useAuth } from '../lib/auth.ts'
 import { exportBackup, isBackupStale, parseBackup } from '../lib/backup.ts'
@@ -42,6 +57,11 @@ export default function Settings() {
   // `null` = closed, `'new'` = creating, otherwise editing that category
   const [editing, setEditing] = useState<Category | 'new' | null>(null)
   const [editingRecurring, setEditingRecurring] = useState<RecurringExpense | 'new' | null>(null)
+  const [deletingCategory, setDeletingCategory] = useState<Category | null>(null)
+  const [deletingRecurring, setDeletingRecurring] = useState<RecurringExpense | null>(null)
+  const [changingPassword, setChangingPassword] = useState(false)
+  const [deletingAccount, setDeletingAccount] = useState(false)
+  const [helping, setHelping] = useState(false)
   const [goal, setGoal] = useState(annualGoal)
   const [message, setMessage] = useState<{ severity: 'success' | 'error'; text: string } | null>(null)
 
@@ -87,12 +107,14 @@ export default function Settings() {
 
       {message ? <Alert severity={message.severity} onClose={() => setMessage(null)}>{message.text}</Alert> : null}
 
+      <Typography variant="overline" color="text.secondary" sx={{ px: 1, pt: 1, fontWeight: 800 }}>
+        Mi cuenta
+      </Typography>
+
       <Card>
         <CardContent>
           <Stack spacing={2}>
-            <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>
-              Cuenta
-            </Typography>
+            <SettingsTitle icon={<AccountCircleOutlinedIcon />}>Cuenta</SettingsTitle>
             <Typography variant="body2" color="text.secondary">
               Has entrado como {auth.user?.email}. Tus datos se guardan en tu cuenta y los ves igual desde cualquier
               dispositivo.
@@ -109,8 +131,14 @@ export default function Settings() {
                 Hay datos guardados en este dispositivo de antes de crear la cuenta. Súbelos para no perderlos.
               </Alert>
             ) : null}
+            <Button variant="outlined" onClick={() => setChangingPassword(true)}>
+              Cambiar contraseña
+            </Button>
             <Button variant="outlined" onClick={() => signOutUser()}>
               Cerrar sesión
+            </Button>
+            <Button color="error" startIcon={<DeleteForeverOutlinedIcon />} onClick={() => setDeletingAccount(true)}>
+              Borrar mi cuenta
             </Button>
           </Stack>
         </CardContent>
@@ -119,9 +147,7 @@ export default function Settings() {
       <Card>
         <CardContent>
           <Stack spacing={2}>
-            <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>
-              Apariencia
-            </Typography>
+            <SettingsTitle icon={<PaletteOutlinedIcon />}>Apariencia</SettingsTitle>
             <ToggleButtonGroup
               exclusive
               fullWidth
@@ -136,12 +162,14 @@ export default function Settings() {
         </CardContent>
       </Card>
 
+      <Typography variant="overline" color="text.secondary" sx={{ px: 1, pt: 1, fontWeight: 800 }}>
+        Mi presupuesto
+      </Typography>
+
       <Card>
         <CardContent>
           <Stack spacing={2}>
-            <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>
-              Meta de ahorro anual
-            </Typography>
+            <SettingsTitle icon={<SavingsOutlinedIcon />}>Meta de ahorro anual</SettingsTitle>
             <Typography variant="body2" color="text.secondary">
               Cuánto quieres ahorrar este año. Verás tu progreso en el Resumen. Déjala vacía para no usarla.
             </Typography>
@@ -163,9 +191,7 @@ export default function Settings() {
       <Card>
         <CardContent>
           <Stack spacing={1.5}>
-            <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>
-              Gastos recurrentes
-            </Typography>
+            <SettingsTitle icon={<RepeatOutlinedIcon />}>Gastos recurrentes</SettingsTitle>
             <Typography variant="body2" color="text.secondary">
               Alquiler, suscripciones... Se apuntan solos cada mes, el día que elijas, al abrir la app.
             </Typography>
@@ -180,7 +206,7 @@ export default function Settings() {
                 <IconButton aria-label={`Editar ${item.name}`} onClick={() => setEditingRecurring(item)}>
                   <EditOutlinedIcon />
                 </IconButton>
-                <IconButton aria-label={`Borrar ${item.name}`} onClick={() => removeRecurring(item.id)}>
+                <IconButton aria-label={`Borrar ${item.name}`} onClick={() => setDeletingRecurring(item)}>
                   <DeleteOutlinedIcon />
                 </IconButton>
               </Stack>
@@ -194,10 +220,40 @@ export default function Settings() {
 
       <Card>
         <CardContent>
+          <Stack spacing={1.5}>
+            <SettingsTitle icon={<CategoryOutlinedIcon />}>Categorías</SettingsTitle>
+            {categories.map((category) => {
+              const Icon = iconFor(category.icon)
+              return (
+                <Stack key={category.id} direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
+                  <Avatar sx={{ bgcolor: category.color }}>
+                    <Icon />
+                  </Avatar>
+                  <Typography sx={{ flexGrow: 1 }}>{category.name}</Typography>
+                  <IconButton aria-label={`Editar ${category.name}`} onClick={() => setEditing(category)}>
+                    <EditOutlinedIcon />
+                  </IconButton>
+                  <IconButton aria-label={`Borrar ${category.name}`} onClick={() => setDeletingCategory(category)}>
+                    <DeleteOutlinedIcon />
+                  </IconButton>
+                </Stack>
+              )
+            })}
+            <Button startIcon={<AddIcon />} onClick={() => setEditing('new')}>
+              Añadir categoría
+            </Button>
+          </Stack>
+        </CardContent>
+      </Card>
+
+      <Typography variant="overline" color="text.secondary" sx={{ px: 1, pt: 1, fontWeight: 800 }}>
+        Mis datos
+      </Typography>
+
+      <Card>
+        <CardContent>
           <Stack spacing={2}>
-            <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>
-              Copia de seguridad
-            </Typography>
+            <SettingsTitle icon={<BackupOutlinedIcon />}>Copia de seguridad</SettingsTitle>
             {isBackupStale(lastExportAt, hasData) ? (
               <Alert severity="warning">Hace más de 30 días de tu última copia. Conviene exportar una.</Alert>
             ) : null}
@@ -223,42 +279,14 @@ export default function Settings() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardContent>
-          <Stack spacing={1.5}>
-            <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>
-              Categorías
-            </Typography>
-            {categories.map((category) => {
-              const Icon = iconFor(category.icon)
-              return (
-                <Stack key={category.id} direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
-                  <Avatar sx={{ bgcolor: category.color }}>
-                    <Icon />
-                  </Avatar>
-                  <Typography sx={{ flexGrow: 1 }}>{category.name}</Typography>
-                  <IconButton aria-label={`Editar ${category.name}`} onClick={() => setEditing(category)}>
-                    <EditOutlinedIcon />
-                  </IconButton>
-                  <IconButton aria-label={`Borrar ${category.name}`} onClick={() => removeCategory(category.id)}>
-                    <DeleteOutlinedIcon />
-                  </IconButton>
-                </Stack>
-              )
-            })}
-            <Button startIcon={<AddIcon />} onClick={() => setEditing('new')}>
-              Añadir categoría
-            </Button>
-          </Stack>
-        </CardContent>
-      </Card>
+      <Typography variant="overline" color="text.secondary" sx={{ px: 1, pt: 1, fontWeight: 800 }}>
+        Ayuda
+      </Typography>
 
       <Card>
         <CardContent>
           <Stack spacing={1}>
-            <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>
-              Cómo instalar en iPhone
-            </Typography>
+            <SettingsTitle icon={<PhoneIphoneOutlinedIcon />}>Cómo instalar en iPhone</SettingsTitle>
             <Typography variant="body2">1. Abre esta web en Safari.</Typography>
             <Typography variant="body2">2. Pulsa Compartir y elige «Añadir a pantalla de inicio».</Typography>
             <Typography variant="body2">3. Usa siempre la app instalada desde tu pantalla de inicio.</Typography>
@@ -270,10 +298,56 @@ export default function Settings() {
         </CardContent>
       </Card>
 
+      <Card>
+        <CardContent>
+          <Stack spacing={1.5}>
+            <SettingsTitle icon={<InfoOutlinedIcon />}>Acerca de Stash</SettingsTitle>
+            <Typography variant="body2" color="text.secondary">
+              Stash reparte tu sueldo en sobres y te enseña cuánto te queda en cada uno. Una app personal, con tus datos
+              guardados en tu cuenta.
+            </Typography>
+            <Button variant="outlined" startIcon={<HelpOutlineOutlinedIcon />} onClick={() => setHelping(true)}>
+              Cómo funciona
+            </Button>
+          </Stack>
+        </CardContent>
+      </Card>
+
+      {deletingAccount ? <DeleteAccountDialog onClose={() => setDeletingAccount(false)} /> : null}
+
+      {helping ? <HelpDialog onClose={() => setHelping(false)} /> : null}
+
       {editingRecurring ? (
         <RecurringDialog
           item={editingRecurring === 'new' ? undefined : editingRecurring}
           onClose={() => setEditingRecurring(null)}
+        />
+      ) : null}
+
+      {changingPassword ? (
+        <ChangePasswordDialog
+          onChanged={() => setMessage({ severity: 'success', text: 'Contraseña cambiada.' })}
+          onClose={() => setChangingPassword(false)}
+        />
+      ) : null}
+
+      {deletingRecurring ? (
+        <ConfirmDialog
+          title="Borrar gasto recurrente"
+          text={`¿Seguro que quieres borrar «${deletingRecurring.name}»? Dejará de apuntarse cada mes. Los gastos que ya se apuntaron se quedan.`}
+          confirmLabel="Borrar"
+          onConfirm={() => removeRecurring(deletingRecurring.id)}
+          onClose={() => setDeletingRecurring(null)}
+        />
+      ) : null}
+
+      {deletingCategory ? (
+        <ConfirmDialog
+          title="Borrar categoría"
+          text={`¿Seguro que quieres borrar «${deletingCategory.name}»? Sus gastos pasarán a «Sin categoría».`}
+          confirmLabel="Borrar"
+          onConfirm={() => removeCategory(deletingCategory.id)}
+          onClose={() => setDeletingCategory(null)}
         />
       ) : null}
 
