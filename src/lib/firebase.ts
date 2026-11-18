@@ -19,6 +19,8 @@ function createFirebase() {
     // The local cache keeps the app usable offline and syncs the pending writes when the connection returns
     db: initializeFirestore(app, {
       localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
+      // Some networks, proxies and extensions block the streaming connection: fall back to long polling when it fails
+      experimentalAutoDetectLongPolling: true,
       ignoreUndefinedProperties: true,
     }),
   }
