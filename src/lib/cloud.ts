@@ -3,6 +3,7 @@ import {
   deleteDoc,
   doc,
   getDoc,
+  getDocs,
   onSnapshot,
   setDoc,
   writeBatch,
@@ -134,6 +135,21 @@ export function saveExpenseDoc(uid: string, expense: Expense): Promise<void> {
 export function deleteExpenseDoc(uid: string, id: string): Promise<void> {
   const { db } = requireFirebase()
   return deleteDoc(doc(items(db, uid, 'expenses'), id))
+}
+
+// Deletes everything the user stored: every document of every collection and the settings document
+export async function deleteAllUserData(uid: string): Promise<void> {
+  const { db } = requireFirebase()
+  const names: CollectionName[] = ['categories', 'plans', 'expenses', 'recurring']
+  const refs = (await Promise.all(names.map((name) => getDocs(items(db, uid, name))))).flatMap((snapshot) =>
+    snapshot.docs.map((item) => item.ref),
+  )
+  for (let start = 0; start < refs.length; start += BATCH_SIZE) {
+    const batch = writeBatch(db)
+    refs.slice(start, start + BATCH_SIZE).forEach((ref) => batch.delete(ref))
+    await batch.commit()
+  }
+  await deleteDoc(userDoc(db, uid))
 }
 
 type Snapshot = { categories: Category[]; plans: Record<string, MonthPlan>; expenses: Expense[] }

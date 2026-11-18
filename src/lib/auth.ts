@@ -1,5 +1,6 @@
 import {
   createUserWithEmailAndPassword,
+  deleteUser,
   EmailAuthProvider,
   onAuthStateChanged,
   reauthenticateWithCredential,
@@ -11,6 +12,7 @@ import {
 } from 'firebase/auth'
 import { useSyncExternalStore } from 'react'
 import { connectStore } from '../store/useAppStore.ts'
+import { deleteAllUserData } from './cloud.ts'
 import { firebase, requireFirebase } from './firebase.ts'
 
 type AuthState = { status: 'loading' | 'signedOut' | 'signedIn'; user: User | null }
@@ -56,6 +58,15 @@ export async function changePassword(currentPassword: string, newPassword: strin
   if (!user?.email) throw new Error('No signed in user')
   await reauthenticateWithCredential(user, EmailAuthProvider.credential(user.email, currentPassword))
   await updatePassword(user, newPassword)
+}
+
+// Checks the password first, then removes the data (the rules need the session) and finally the account itself
+export async function deleteAccount(password: string): Promise<void> {
+  const user = requireFirebase().auth.currentUser
+  if (!user?.email) throw new Error('No signed in user')
+  await reauthenticateWithCredential(user, EmailAuthProvider.credential(user.email, password))
+  await deleteAllUserData(user.uid)
+  await deleteUser(user)
 }
 
 export function signOutUser(): Promise<void> {
