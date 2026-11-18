@@ -1,11 +1,23 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" fill="#00AEEF"/>
-  <g fill="#ffffff" stroke="#00AEEF" stroke-width="8" stroke-linejoin="round">
-    <path d="M146 295v34a110 38 0 0 0 220 0v-34z"/>
-    <ellipse cx="256" cy="295" rx="110" ry="38"/>
-    <path d="M146 239v34a110 38 0 0 0 220 0v-34z"/>
-    <ellipse cx="256" cy="239" rx="110" ry="38"/>
-    <path d="M146 183v34a110 38 0 0 0 220 0v-34z"/>
-    <ellipse cx="256" cy="183" rx="110" ry="38"/>
+  <rect width="512" height="512" fill="#01BAFD"/>
+  <g transform="translate(256 256) scale(0.95) translate(-245 -261)">
+    <!-- coin -->
+    <circle cx="240" cy="122" r="44" fill="#FFC83D"/>
+    <circle cx="240" cy="122" r="28" fill="none" stroke="#F59E0B" stroke-width="9"/>
+    <!-- tail -->
+    <path d="M96 272c-44-8-38-52-10-58" fill="none" stroke="#fff" stroke-width="14" stroke-linecap="round"/>
+    <!-- legs -->
+    <rect x="160" y="370" width="48" height="72" rx="18" fill="#fff"/>
+    <rect x="272" y="370" width="48" height="72" rx="18" fill="#fff"/>
+    <!-- body and snout -->
+    <ellipse cx="240" cy="290" rx="152" ry="118" fill="#fff"/>
+    <ellipse cx="392" cy="302" rx="40" ry="50" fill="#fff"/>
+    <!-- ear -->
+    <path d="M286 210L318 146L356 214Z" fill="#fff" stroke="#fff" stroke-width="14" stroke-linejoin="round"/>
+    <!-- details -->
+    <ellipse cx="400" cy="289" rx="6" ry="9" fill="#01BAFD"/>
+    <ellipse cx="400" cy="315" rx="6" ry="9" fill="#01BAFD"/>
+    <circle cx="334" cy="268" r="11" fill="#01BAFD"/>
+    <line x1="204" y1="186" x2="274" y2="186" stroke="#01BAFD" stroke-width="12" stroke-linecap="round"/>
   </g>
 </svg>

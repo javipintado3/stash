@@ -14,7 +14,7 @@ npm run preview  # serve the production build locally
 
 ## Icons
 
-The source icon is `public/icon.svg`. To regenerate the PNG icons (192, 512, maskable, apple-touch-icon):
+The source logo is `public/icon.svg` (square, solid background). To regenerate the PNG icons (192, 512, maskable, apple-touch-icon):
 
 ```bash
 npx pwa-assets-generator

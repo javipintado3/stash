@@ -1,6 +1,16 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { copyPlanToMonth, emptyPlan } from '../lib/budget.ts'
+import {
+  deleteCategoryDoc,
+  deleteExpenseDoc,
+  replaceAllData,
+  saveCategoryDoc,
+  saveExpenseDoc,
+  savePlanDoc,
+  seedDefaultCategories,
+  watchUserData,
+} from '../lib/cloud.ts'
 import { currentMonth, shiftMonth } from '../lib/months.ts'
 import type { Category, Expense, MonthPlan } from '../types.ts'
 
@@ -15,6 +25,8 @@ export type PersistedData = {
 }
 
 type AppState = PersistedData & {
+  // True once the first copy of the cloud data has arrived, so the screens never flash empty
+  loaded: boolean
   selectedMonth: string
   setSelectedMonth: (month: string) => void
   updatePlan: (month: string, update: (plan: MonthPlan) => MonthPlan) => void
@@ -26,7 +38,6 @@ type AppState = PersistedData & {
   removeCategory: (id: string) => void
   markExported: () => void
   importData: (data: PersistedData) => void
-  resetData: () => void
 }
 
 export const DEFAULT_CATEGORIES: Category[] = [
@@ -36,68 +47,100 @@ export const DEFAULT_CATEGORIES: Category[] = [
   { id: 'shopping', name: 'Compras', icon: 'bag', color: '#f59e0b' },
 ]
 
-const initialData: PersistedData = {
-  version: STORE_VERSION,
-  categories: DEFAULT_CATEGORIES,
-  plans: {},
-  expenses: [],
-  lastExportAt: null,
+// The signed-in user. Set by `connectStore`, every write goes to this user's data
+let activeUid: string | null = null
+
+// Writes are applied locally right away and synced later, so a failure is only logged
+function write(task: (uid: string) => Promise<unknown>): void {
+  if (activeUid) task(activeUid).catch((error: unknown) => console.error('Could not save to the cloud', error))
 }
 
 export const useAppStore = create<AppState>()(
+  // Only `lastExportAt` is kept on the device: everything else lives in Firestore
   persist(
-    (set) => ({
-      ...initialData,
+    (set, get) => ({
+      version: STORE_VERSION,
+      categories: [],
+      plans: {},
+      expenses: [],
+      lastExportAt: null,
+      loaded: false,
       selectedMonth: currentMonth(),
       setSelectedMonth: (month) => set({ selectedMonth: month }),
-      updatePlan: (month, update) =>
-        set((state) => ({
-          plans: { ...state.plans, [month]: update(state.plans[month] ?? emptyPlan(month)) },
-        })),
+      updatePlan: (month, update) => {
+        const plan = update(get().plans[month] ?? emptyPlan(month))
+        write((uid) => savePlanDoc(uid, plan))
+      },
       // Copies the closest earlier plan (up to 24 months back) into the given month
-      copyPreviousMonth: (month) =>
-        set((state) => {
-          const source = Array.from({ length: 24 }, (_, index) => state.plans[shiftMonth(month, -(index + 1))]).find(
-            (plan) => plan !== undefined,
-          )
-          return source ? { plans: { ...state.plans, [month]: copyPlanToMonth(source, month) } } : state
-        }),
-      addExpense: (expense) => set((state) => ({ expenses: [expense, ...state.expenses] })),
-      updateExpense: (expense) =>
-        set((state) => ({ expenses: state.expenses.map((item) => (item.id === expense.id ? expense : item)) })),
-      removeExpense: (id) => set((state) => ({ expenses: state.expenses.filter((item) => item.id !== id) })),
-      saveCategory: (category) =>
-        set((state) => ({
-          categories: state.categories.some((item) => item.id === category.id)
-            ? state.categories.map((item) => (item.id === category.id ? category : item))
-            : [...state.categories, category],
-        })),
-      removeCategory: (id) =>
-        set((state) => ({
-          categories: state.categories.filter((item) => item.id !== id),
-          plans: Object.fromEntries(
-            Object.entries(state.plans).map(([month, plan]) => [
-              month,
-              { ...plan, budgets: plan.budgets.filter((budget) => budget.categoryId !== id) },
-            ]),
-          ),
-        })),
+      copyPreviousMonth: (month) => {
+        const { plans } = get()
+        const source = Array.from({ length: 24 }, (_, index) => plans[shiftMonth(month, -(index + 1))]).find(
+          (plan) => plan !== undefined,
+        )
+        if (source) write((uid) => savePlanDoc(uid, copyPlanToMonth(source, month)))
+      },
+      addExpense: (expense) => write((uid) => saveExpenseDoc(uid, expense)),
+      updateExpense: (expense) => write((uid) => saveExpenseDoc(uid, expense)),
+      removeExpense: (id) => write((uid) => deleteExpenseDoc(uid, id)),
+      saveCategory: (category) => write((uid) => saveCategoryDoc(uid, category)),
+      removeCategory: (id) => {
+        const plansToUpdate = Object.values(get().plans)
+          .filter((plan) => plan.budgets.some((budget) => budget.categoryId === id))
+          .map((plan) => ({ ...plan, budgets: plan.budgets.filter((budget) => budget.categoryId !== id) }))
+        write((uid) => deleteCategoryDoc(uid, id, plansToUpdate))
+      },
       markExported: () => set({ lastExportAt: new Date().toISOString() }),
-      importData: (data) => set({ ...data, version: STORE_VERSION }),
-      resetData: () => set({ ...initialData }),
+      importData: (data) => {
+        const { categories, plans, expenses } = get()
+        write((uid) =>
+          replaceAllData(
+            uid,
+            { categories, plans, expenses },
+            { categories: data.categories, plans: data.plans, expenses: data.expenses },
+          ),
+        )
+      },
     }),
     {
-      name: 'ahorro-data',
+      name: 'stash-device',
       version: STORE_VERSION,
-      partialize: (state): PersistedData => ({
-        version: state.version,
-        categories: state.categories,
-        plans: state.plans,
-        expenses: state.expenses,
-        lastExportAt: state.lastExportAt,
-      }),
-      // Future migrations go here, switching on the stored version
-      migrate: (persisted) => persisted as PersistedData,
+      partialize: (state) => ({ lastExportAt: state.lastExportAt }),
     },
   ),
 )
+
+// Called by the auth module when the user signs in (uid) or out (null)
+let stopWatching: (() => void) | null = null
+
+export function connectStore(uid: string | null): void {
+  stopWatching?.()
+  stopWatching = null
+  activeUid = uid
+  useAppStore.setState({ categories: [], plans: {}, expenses: [], loaded: false })
+  if (uid === null) return
+
+  // `loaded` flips once the three collections have delivered their first snapshot
+  const pending = new Set(['categories', 'plans', 'expenses'])
+  const arrived = (name: string) => {
+    pending.delete(name)
+    if (pending.size === 0) useAppStore.setState({ loaded: true })
+  }
+
+  stopWatching = watchUserData(uid, {
+    onCategories: (categories) => {
+      useAppStore.setState({ categories })
+      arrived('categories')
+    },
+    onPlans: (plans) => {
+      useAppStore.setState({ plans })
+      arrived('plans')
+    },
+    onExpenses: (expenses) => {
+      useAppStore.setState({ expenses })
+      arrived('expenses')
+    },
+  })
+
+  // Fails harmlessly when offline the very first time, it is retried on the next sign in
+  seedDefaultCategories(uid, DEFAULT_CATEGORIES).catch((error: unknown) => console.error('Could not seed categories', error))
+}
