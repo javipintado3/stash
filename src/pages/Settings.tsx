@@ -14,6 +14,8 @@ import Typography from '@mui/material/Typography'
 import { useState } from 'react'
 import AmountInput from '../components/AmountInput.tsx'
 import CategoryDialog from '../components/CategoryDialog.tsx'
+import ChangePasswordDialog from '../components/ChangePasswordDialog.tsx'
+import ConfirmDialog from '../components/ConfirmDialog.tsx'
 import RecurringDialog from '../components/RecurringDialog.tsx'
 import { signOutUser, useAuth } from '../lib/auth.ts'
 import { exportBackup, isBackupStale, parseBackup } from '../lib/backup.ts'
@@ -42,6 +44,9 @@ export default function Settings() {
   // `null` = closed, `'new'` = creating, otherwise editing that category
   const [editing, setEditing] = useState<Category | 'new' | null>(null)
   const [editingRecurring, setEditingRecurring] = useState<RecurringExpense | 'new' | null>(null)
+  const [deletingCategory, setDeletingCategory] = useState<Category | null>(null)
+  const [deletingRecurring, setDeletingRecurring] = useState<RecurringExpense | null>(null)
+  const [changingPassword, setChangingPassword] = useState(false)
   const [goal, setGoal] = useState(annualGoal)
   const [message, setMessage] = useState<{ severity: 'success' | 'error'; text: string } | null>(null)
 
@@ -109,6 +114,9 @@ export default function Settings() {
                 Hay datos guardados en este dispositivo de antes de crear la cuenta. Súbelos para no perderlos.
               </Alert>
             ) : null}
+            <Button variant="outlined" onClick={() => setChangingPassword(true)}>
+              Cambiar contraseña
+            </Button>
             <Button variant="outlined" onClick={() => signOutUser()}>
               Cerrar sesión
             </Button>
@@ -180,13 +188,43 @@ export default function Settings() {
                 <IconButton aria-label={`Editar ${item.name}`} onClick={() => setEditingRecurring(item)}>
                   <EditOutlinedIcon />
                 </IconButton>
-                <IconButton aria-label={`Borrar ${item.name}`} onClick={() => removeRecurring(item.id)}>
+                <IconButton aria-label={`Borrar ${item.name}`} onClick={() => setDeletingRecurring(item)}>
                   <DeleteOutlinedIcon />
                 </IconButton>
               </Stack>
             ))}
             <Button startIcon={<AddIcon />} onClick={() => setEditingRecurring('new')}>
               Añadir gasto recurrente
+            </Button>
+          </Stack>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent>
+          <Stack spacing={1.5}>
+            <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>
+              Categorías
+            </Typography>
+            {categories.map((category) => {
+              const Icon = iconFor(category.icon)
+              return (
+                <Stack key={category.id} direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
+                  <Avatar sx={{ bgcolor: category.color }}>
+                    <Icon />
+                  </Avatar>
+                  <Typography sx={{ flexGrow: 1 }}>{category.name}</Typography>
+                  <IconButton aria-label={`Editar ${category.name}`} onClick={() => setEditing(category)}>
+                    <EditOutlinedIcon />
+                  </IconButton>
+                  <IconButton aria-label={`Borrar ${category.name}`} onClick={() => setDeletingCategory(category)}>
+                    <DeleteOutlinedIcon />
+                  </IconButton>
+                </Stack>
+              )
+            })}
+            <Button startIcon={<AddIcon />} onClick={() => setEditing('new')}>
+              Añadir categoría
             </Button>
           </Stack>
         </CardContent>
@@ -225,36 +263,6 @@ export default function Settings() {
 
       <Card>
         <CardContent>
-          <Stack spacing={1.5}>
-            <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>
-              Categorías
-            </Typography>
-            {categories.map((category) => {
-              const Icon = iconFor(category.icon)
-              return (
-                <Stack key={category.id} direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
-                  <Avatar sx={{ bgcolor: category.color }}>
-                    <Icon />
-                  </Avatar>
-                  <Typography sx={{ flexGrow: 1 }}>{category.name}</Typography>
-                  <IconButton aria-label={`Editar ${category.name}`} onClick={() => setEditing(category)}>
-                    <EditOutlinedIcon />
-                  </IconButton>
-                  <IconButton aria-label={`Borrar ${category.name}`} onClick={() => removeCategory(category.id)}>
-                    <DeleteOutlinedIcon />
-                  </IconButton>
-                </Stack>
-              )
-            })}
-            <Button startIcon={<AddIcon />} onClick={() => setEditing('new')}>
-              Añadir categoría
-            </Button>
-          </Stack>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardContent>
           <Stack spacing={1}>
             <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>
               Cómo instalar en iPhone
@@ -274,6 +282,33 @@ export default function Settings() {
         <RecurringDialog
           item={editingRecurring === 'new' ? undefined : editingRecurring}
           onClose={() => setEditingRecurring(null)}
+        />
+      ) : null}
+
+      {changingPassword ? (
+        <ChangePasswordDialog
+          onChanged={() => setMessage({ severity: 'success', text: 'Contraseña cambiada.' })}
+          onClose={() => setChangingPassword(false)}
+        />
+      ) : null}
+
+      {deletingRecurring ? (
+        <ConfirmDialog
+          title="Borrar gasto recurrente"
+          text={`¿Seguro que quieres borrar «${deletingRecurring.name}»? Dejará de apuntarse cada mes. Los gastos que ya se apuntaron se quedan.`}
+          confirmLabel="Borrar"
+          onConfirm={() => removeRecurring(deletingRecurring.id)}
+          onClose={() => setDeletingRecurring(null)}
+        />
+      ) : null}
+
+      {deletingCategory ? (
+        <ConfirmDialog
+          title="Borrar categoría"
+          text={`¿Seguro que quieres borrar «${deletingCategory.name}»? Sus gastos pasarán a «Sin categoría».`}
+          confirmLabel="Borrar"
+          onConfirm={() => removeCategory(deletingCategory.id)}
+          onClose={() => setDeletingCategory(null)}
         />
       ) : null}
 

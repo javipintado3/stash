@@ -1,9 +1,12 @@
 import {
   createUserWithEmailAndPassword,
+  EmailAuthProvider,
   onAuthStateChanged,
+  reauthenticateWithCredential,
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signOut,
+  updatePassword,
   type User,
 } from 'firebase/auth'
 import { useSyncExternalStore } from 'react'
@@ -45,6 +48,14 @@ export async function signUp(email: string, password: string): Promise<void> {
 
 export function resetPassword(email: string): Promise<void> {
   return sendPasswordResetEmail(requireFirebase().auth, email)
+}
+
+// Firebase asks for a recent sign in before changing the password, so the current one is checked first
+export async function changePassword(currentPassword: string, newPassword: string): Promise<void> {
+  const user = requireFirebase().auth.currentUser
+  if (!user?.email) throw new Error('No signed in user')
+  await reauthenticateWithCredential(user, EmailAuthProvider.credential(user.email, currentPassword))
+  await updatePassword(user, newPassword)
 }
 
 export function signOutUser(): Promise<void> {
