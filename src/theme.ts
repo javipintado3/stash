@@ -1,7 +1,7 @@
 import { createTheme } from '@mui/material/styles'
 
-// Warm paper look: cream and graphite backgrounds, a sage green accent and thin borders instead of shadows
-export const PRIMARY_COLOR = '#3f6b4f'
+// Navy and mustard look: deep blue backgrounds, a mustard accent for the main action and thin borders instead of shadows
+export const PRIMARY_COLOR = '#1f3a68'
 
 const SERIF = '"Fraunces", Georgia, "Times New Roman", serif'
 
@@ -10,12 +10,13 @@ export function buildTheme(mode: 'light' | 'dark') {
   return createTheme({
     palette: {
       mode,
-      primary: dark ? { main: '#9fcaa8', contrastText: '#14241a' } : { main: PRIMARY_COLOR, contrastText: '#ffffff' },
-      success: { main: dark ? '#7fc99a' : '#2e7d4f' },
-      warning: { main: dark ? '#e0b04a' : '#b9801a' },
-      error: { main: dark ? '#e88a82' : '#b94a40' },
-      background: dark ? { default: '#171613', paper: '#22211d' } : { default: '#f5efe3', paper: '#fffcf5' },
-      divider: dark ? '#37352f' : '#e2d9c6',
+      primary: dark ? { main: '#8db3f0', contrastText: '#0d1624' } : { main: PRIMARY_COLOR, contrastText: '#ffffff' },
+      secondary: { main: '#e8b33a', contrastText: '#1b1400' },
+      success: { main: dark ? '#4cc38a' : '#2e9e5b' },
+      warning: { main: '#f5a524' },
+      error: { main: dark ? '#ff6b70' : '#e5484d' },
+      background: dark ? { default: '#0d1624', paper: '#152238' } : { default: '#f3f5fa', paper: '#ffffff' },
+      divider: dark ? '#273755' : '#dbe2ef',
     },
     shape: { borderRadius: 10 },
     typography: {

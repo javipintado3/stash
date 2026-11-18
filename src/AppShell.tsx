@@ -38,7 +38,7 @@ export default function AppShell() {
         <HelpOutlineIcon />
       </Fab>
       <Fab
-        color="primary"
+        color="secondary"
         aria-label="Añadir gasto"
         onClick={() => setAdding(true)}
         sx={{ position: 'fixed', right: 16, bottom: 'calc(72px + var(--safe-bottom))', zIndex: 11 }}
