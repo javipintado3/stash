@@ -11,46 +11,38 @@ type HelpDialogProps = {
 }
 
 const STEPS = [
-  {
-    title: '1. Planifica el mes',
-    text: 'En Plan, escribe tu sueldo, lo que quieres ahorrar y tus aportaciones fijas. Después reparte el resto entre tus categorías. Arriba verás siempre cuánto te queda por repartir.',
-  },
-  {
-    title: '2. Apunta tus gastos',
-    text: 'Pulsa el botón + y escribe el importe. Toca una categoría y guarda. Se queda marcada la última que usaste para ir más rápido.',
-  },
-  {
-    title: '3. Mira cómo vas',
-    text: 'En Resumen ves cuánto llevas gastado y cuánto te queda en cada categoría. Te avisa al llegar al 80 % y cuando te pasas. También ves tu ahorro real frente a tu meta.',
-  },
-  {
-    title: '4. Mes siguiente',
-    text: 'Al abrir un mes nuevo, la app copia el plan anterior para que solo cambies lo que sea distinto. Cada mes es independiente de los demás.',
-  },
-  {
-    title: 'Otras cosas útiles',
-    text: 'En Ajustes puedes crear gastos recurrentes que se apuntan solos, poner una meta de ahorro anual, cambiar tus categorías y hacer una copia de seguridad. Tus datos están en tu cuenta: los ves igual desde cualquier dispositivo.',
-  },
+  { title: '1. Planifica el mes', text: 'En Planificar pon tu sueldo, tu ahorro y lo fijo. Reparte el resto entre tus categorías.' },
+  { title: '2. Apunta tus gastos', text: 'Pulsa + , escribe el importe, toca una categoría y guarda.' },
+  { title: '3. Mira cómo vas', text: 'En Resumen ves lo gastado y lo que queda en cada categoría. Te avisa al llegar al 80 %.' },
+  { title: '4. Mes nuevo', text: 'La app copia el plan anterior. Solo cambias lo que sea distinto.' },
+  { title: 'Y además', text: 'En Ajustes: gastos recurrentes, meta anual, categorías y copia de seguridad.' },
 ]
 
 export default function HelpDialog({ onClose }: HelpDialogProps) {
   return (
-    <Dialog open onClose={onClose} fullWidth maxWidth="xs" scroll="paper">
-      <DialogTitle>Cómo funciona Stash</DialogTitle>
-      <DialogContent dividers>
+    <Dialog
+      open
+      onClose={onClose}
+      fullWidth
+      maxWidth="xs"
+      scroll="paper"
+      sx={{ '& .MuiDialog-paper': { m: 2, width: 'calc(100% - 32px)' } }}
+    >
+      <DialogTitle sx={{ pb: 1 }}>Cómo funciona Stash</DialogTitle>
+      <DialogContent sx={{ pt: 1 }}>
         <Stack spacing={2}>
           {STEPS.map((step) => (
             <div key={step.title}>
               <Typography sx={{ fontWeight: 800 }}>{step.title}</Typography>
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.5 }}>
                 {step.text}
               </Typography>
             </div>
           ))}
         </Stack>
       </DialogContent>
-      <DialogActions>
-        <Button variant="contained" onClick={onClose}>
+      <DialogActions sx={{ px: 3, pb: 2 }}>
+        <Button variant="contained" fullWidth onClick={onClose}>
           Entendido
         </Button>
       </DialogActions>
