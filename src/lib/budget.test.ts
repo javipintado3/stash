@@ -1,5 +1,15 @@
 import type { Expense, MonthPlan } from '../types.ts'
-import { budgetStatus, copyPlanToMonth, realSavings, remaining, spentInCategory, unassigned } from './budget.ts'
+import {
+  budgetStatus,
+  categoryAlerts,
+  copyPlanToMonth,
+  monthlySavings,
+  realSavings,
+  remaining,
+  spentInCategory,
+  unassigned,
+  yearSavings,
+} from './budget.ts'
 import { centsToInput, parseEurosToCents } from './money.ts'
 import { shiftMonth } from './months.ts'
 
@@ -78,5 +88,54 @@ describe('shiftMonth', () => {
   it('crosses year boundaries', () => {
     expect(shiftMonth('2026-12', 1)).toBe('2027-01')
     expect(shiftMonth('2026-01', -1)).toBe('2025-12')
+  })
+})
+
+describe('categoryAlerts', () => {
+  const categories = [
+    { id: 'home', name: 'Casa', icon: 'home', color: '#000' },
+    { id: 'going-out', name: 'Salir', icon: 'nightlife', color: '#000' },
+    { id: 'shopping', name: 'Compras', icon: 'bag', color: '#000' },
+  ]
+
+  it('flags categories at 80 % and beyond, the exceeded ones first', () => {
+    const spending: Expense[] = [
+      { id: 'a', month: '2026-11', categoryId: 'home', amount: 42000, date: '2026-11-03' },
+      { id: 'b', month: '2026-11', categoryId: 'going-out', amount: 35000, date: '2026-11-04' },
+    ]
+    const alerts = categoryAlerts(plan, spending, categories)
+    expect(alerts.map((alert) => [alert.category.id, alert.status, alert.percent])).toEqual([
+      ['going-out', 'over', 117],
+      ['home', 'warning', 84],
+    ])
+  })
+
+  it('returns nothing while every category is under 80 %', () => {
+    expect(categoryAlerts(plan, expenses, categories)).toEqual([])
+  })
+
+  it('flags spending in a category with no budget as exceeded', () => {
+    const spending: Expense[] = [{ id: 'c', month: '2026-11', categoryId: 'shopping', amount: 1000, date: '2026-11-07' }]
+    expect(categoryAlerts(plan, spending, categories).map((alert) => alert.status)).toEqual(['over'])
+  })
+})
+
+describe('yearSavings and monthlySavings', () => {
+  const plans = {
+    '2026-10': { ...plan, month: '2026-10' },
+    '2026-11': plan,
+    '2025-12': { ...plan, month: '2025-12' },
+  }
+
+  it('adds up the real savings of the months of the year that have a plan', () => {
+    // October: 180000 - 20000 - 99999, November: 180000 - 20000 - 23550
+    expect(yearSavings(plans, expenses, '2026')).toBe(60001 + 136450)
+  })
+
+  it('lists the savings and goal of each month, zero when there is no plan', () => {
+    expect(monthlySavings(plans, expenses, ['2026-09', '2026-11'])).toEqual([
+      { month: '2026-09', savings: 0, goal: 0 },
+      { month: '2026-11', savings: 136450, goal: 60000 },
+    ])
   })
 })

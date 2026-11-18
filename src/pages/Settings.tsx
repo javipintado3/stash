@@ -8,15 +8,20 @@ import Card from '@mui/material/Card'
 import CardContent from '@mui/material/CardContent'
 import IconButton from '@mui/material/IconButton'
 import Stack from '@mui/material/Stack'
+import ToggleButton from '@mui/material/ToggleButton'
+import ToggleButtonGroup from '@mui/material/ToggleButtonGroup'
 import Typography from '@mui/material/Typography'
 import { useState } from 'react'
+import AmountInput from '../components/AmountInput.tsx'
 import CategoryDialog from '../components/CategoryDialog.tsx'
+import RecurringDialog from '../components/RecurringDialog.tsx'
 import { signOutUser, useAuth } from '../lib/auth.ts'
 import { exportBackup, isBackupStale, parseBackup } from '../lib/backup.ts'
 import { iconFor } from '../lib/icons.tsx'
 import { readLegacyData, removeLegacyData } from '../lib/legacy.ts'
+import { formatEuros } from '../lib/money.ts'
 import { useAppStore } from '../store/useAppStore.ts'
-import type { Category } from '../types.ts'
+import type { Category, RecurringExpense } from '../types.ts'
 
 export default function Settings() {
   const auth = useAuth()
@@ -27,9 +32,17 @@ export default function Settings() {
   const removeCategory = useAppStore((state) => state.removeCategory)
   const markExported = useAppStore((state) => state.markExported)
   const importData = useAppStore((state) => state.importData)
+  const recurring = useAppStore((state) => state.recurring)
+  const removeRecurring = useAppStore((state) => state.removeRecurring)
+  const annualGoal = useAppStore((state) => state.annualSavingsGoal)
+  const setAnnualGoal = useAppStore((state) => state.setAnnualSavingsGoal)
+  const themeMode = useAppStore((state) => state.themeMode)
+  const setThemeMode = useAppStore((state) => state.setThemeMode)
 
   // `null` = closed, `'new'` = creating, otherwise editing that category
   const [editing, setEditing] = useState<Category | 'new' | null>(null)
+  const [editingRecurring, setEditingRecurring] = useState<RecurringExpense | 'new' | null>(null)
+  const [goal, setGoal] = useState(annualGoal)
   const [message, setMessage] = useState<{ severity: 'success' | 'error'; text: string } | null>(null)
 
   // Data left on this device by the version that had no cloud (read once when the screen opens)
@@ -98,6 +111,82 @@ export default function Settings() {
             ) : null}
             <Button variant="outlined" onClick={() => signOutUser()}>
               Cerrar sesión
+            </Button>
+          </Stack>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent>
+          <Stack spacing={2}>
+            <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>
+              Apariencia
+            </Typography>
+            <ToggleButtonGroup
+              exclusive
+              fullWidth
+              value={themeMode}
+              onChange={(_, value: typeof themeMode | null) => (value ? setThemeMode(value) : undefined)}
+            >
+              <ToggleButton value="system">Sistema</ToggleButton>
+              <ToggleButton value="light">Claro</ToggleButton>
+              <ToggleButton value="dark">Oscuro</ToggleButton>
+            </ToggleButtonGroup>
+          </Stack>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent>
+          <Stack spacing={2}>
+            <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>
+              Meta de ahorro anual
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Cuánto quieres ahorrar este año. Verás tu progreso en el Resumen. Déjala vacía para no usarla.
+            </Typography>
+            <AmountInput label="Meta del año" cents={goal} onChange={setGoal} />
+            <Button
+              variant="outlined"
+              disabled={goal === annualGoal}
+              onClick={() => {
+                setAnnualGoal(goal)
+                setMessage({ severity: 'success', text: 'Meta guardada.' })
+              }}
+            >
+              Guardar meta
+            </Button>
+          </Stack>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent>
+          <Stack spacing={1.5}>
+            <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>
+              Gastos recurrentes
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Alquiler, suscripciones... Se apuntan solos cada mes, el día que elijas, al abrir la app.
+            </Typography>
+            {recurring.map((item) => (
+              <Stack key={item.id} direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
+                <div style={{ flexGrow: 1 }}>
+                  <Typography sx={{ fontWeight: 600 }}>{item.name}</Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {formatEuros(item.amount)} · día {item.day}
+                  </Typography>
+                </div>
+                <IconButton aria-label={`Editar ${item.name}`} onClick={() => setEditingRecurring(item)}>
+                  <EditOutlinedIcon />
+                </IconButton>
+                <IconButton aria-label={`Borrar ${item.name}`} onClick={() => removeRecurring(item.id)}>
+                  <DeleteOutlinedIcon />
+                </IconButton>
+              </Stack>
+            ))}
+            <Button startIcon={<AddIcon />} onClick={() => setEditingRecurring('new')}>
+              Añadir gasto recurrente
             </Button>
           </Stack>
         </CardContent>
@@ -180,6 +269,13 @@ export default function Settings() {
           </Stack>
         </CardContent>
       </Card>
+
+      {editingRecurring ? (
+        <RecurringDialog
+          item={editingRecurring === 'new' ? undefined : editingRecurring}
+          onClose={() => setEditingRecurring(null)}
+        />
+      ) : null}
 
       {editing ? (
         <CategoryDialog category={editing === 'new' ? undefined : editing} onClose={() => setEditing(null)} />

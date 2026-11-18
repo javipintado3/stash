@@ -1,4 +1,4 @@
-const euroFormatter = new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' })
+const euroFormatter = new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', useGrouping: 'always' })
 
 export function formatEuros(cents: number): string {
   return euroFormatter.format(cents / 100)

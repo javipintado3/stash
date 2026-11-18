@@ -9,11 +9,13 @@ import {
   type DocumentData,
   type Firestore,
 } from 'firebase/firestore'
-import type { Category, Expense, MonthPlan } from '../types.ts'
+import type { Category, Expense, MonthPlan, RecurringExpense } from '../types.ts'
 import { requireFirebase } from './firebase.ts'
+import { recurringExpenseFor } from './recurring.ts'
 
 // Layout in Firestore, everything hangs from the signed-in user:
-//   users/{uid}                    -> { seeded: true } once the default categories were created
+//   users/{uid}                    -> { seeded, annualSavingsGoal } settings of the account
+//   users/{uid}/recurring/{id}     -> expenses logged automatically every month
 //   users/{uid}/categories/{id}
 //   users/{uid}/plans/{month}      -> the document id is the "YYYY-MM" month
 //   users/{uid}/expenses/{id}
@@ -26,13 +28,17 @@ type Handlers = {
   onCategories: (categories: Category[]) => void
   onPlans: (plans: Record<string, MonthPlan>) => void
   onExpenses: (expenses: Expense[]) => void
+  onRecurring: (items: RecurringExpense[]) => void
+  onSettings: (settings: { annualSavingsGoal: number }) => void
 }
+
+type CollectionName = 'categories' | 'plans' | 'expenses' | 'recurring'
 
 function userDoc(db: Firestore, uid: string) {
   return doc(db, 'users', uid)
 }
 
-function items(db: Firestore, uid: string, name: 'categories' | 'plans' | 'expenses') {
+function items(db: Firestore, uid: string, name: CollectionName) {
   return collection(db, 'users', uid, name)
 }
 
@@ -48,11 +54,46 @@ export function watchUserData(uid: string, handlers: Handlers): () => void {
   const stopExpenses = onSnapshot(items(db, uid, 'expenses'), (snapshot) =>
     handlers.onExpenses(snapshot.docs.map((item) => item.data() as Expense)),
   )
+  const stopRecurring = onSnapshot(items(db, uid, 'recurring'), (snapshot) =>
+    handlers.onRecurring(snapshot.docs.map((item) => item.data() as RecurringExpense)),
+  )
+  const stopSettings = onSnapshot(userDoc(db, uid), (snapshot) =>
+    handlers.onSettings({ annualSavingsGoal: Number(snapshot.data()?.annualSavingsGoal ?? 0) }),
+  )
   return () => {
     stopCategories()
     stopPlans()
     stopExpenses()
+    stopRecurring()
+    stopSettings()
   }
+}
+
+export function setAnnualSavingsGoalDoc(uid: string, cents: number): Promise<void> {
+  const { db } = requireFirebase()
+  return setDoc(userDoc(db, uid), { annualSavingsGoal: cents }, { merge: true })
+}
+
+export function saveRecurringDoc(uid: string, item: RecurringExpense): Promise<void> {
+  const { db } = requireFirebase()
+  return setDoc(doc(items(db, uid, 'recurring'), item.id), item)
+}
+
+export function deleteRecurringDoc(uid: string, id: string): Promise<void> {
+  const { db } = requireFirebase()
+  return deleteDoc(doc(items(db, uid, 'recurring'), id))
+}
+
+// Logs this month's expense of each item and marks the item as done, all in one batch
+export async function logRecurringExpenses(uid: string, due: RecurringExpense[], month: string): Promise<void> {
+  const { db } = requireFirebase()
+  const batch = writeBatch(db)
+  due.forEach((item) => {
+    const expense = recurringExpenseFor(item, month)
+    batch.set(doc(items(db, uid, 'expenses'), expense.id), expense)
+    batch.set(doc(items(db, uid, 'recurring'), item.id), { ...item, lastGenerated: month })
+  })
+  await batch.commit()
 }
 
 // Creates the default categories the first time an account is used
@@ -103,7 +144,7 @@ export async function replaceAllData(uid: string, current: Snapshot, next: Snaps
   const operations: ((batch: ReturnType<typeof writeBatch>) => void)[] = []
 
   const sync = <T extends DocumentData>(
-    name: 'categories' | 'plans' | 'expenses',
+    name: CollectionName,
     currentIds: string[],
     nextEntries: [string, T][],
   ) => {
