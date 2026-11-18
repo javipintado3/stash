@@ -3,7 +3,6 @@ import HelpOutlineIcon from '@mui/icons-material/HelpOutlineOutlined'
 import Box from '@mui/material/Box'
 import Container from '@mui/material/Container'
 import Fab from '@mui/material/Fab'
-import IconButton from '@mui/material/IconButton'
 import { useState } from 'react'
 import { Route, Routes } from 'react-router-dom'
 import BottomNav from './components/BottomNav.tsx'
@@ -21,14 +20,7 @@ export default function AppShell() {
 
   return (
     <Box sx={{ minHeight: '100dvh', pt: 'var(--safe-top)' }}>
-      <Container maxWidth="sm" sx={{ py: 2, pb: 'calc(96px + var(--safe-bottom))', position: 'relative' }}>
-        <IconButton
-          aria-label="Cómo funciona"
-          onClick={() => setHelping(true)}
-          sx={{ position: 'absolute', top: 12, right: 8, zIndex: 1 }}
-        >
-          <HelpOutlineIcon />
-        </IconButton>
+      <Container maxWidth="sm" sx={{ py: 2, pb: 'calc(96px + var(--safe-bottom))' }}>
         <Routes>
           <Route path="/" element={<Summary />} />
           <Route path="/plan" element={<Plan />} />
@@ -37,6 +29,14 @@ export default function AppShell() {
           <Route path="/settings" element={<Settings />} />
         </Routes>
       </Container>
+      <Fab
+        size="small"
+        aria-label="Cómo funciona"
+        onClick={() => setHelping(true)}
+        sx={{ position: 'fixed', right: 24, bottom: 'calc(140px + var(--safe-bottom))', zIndex: 11 }}
+      >
+        <HelpOutlineIcon />
+      </Fab>
       <Fab
         color="primary"
         aria-label="Añadir gasto"
